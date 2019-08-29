@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.RestController;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
@@ -28,6 +27,14 @@ public class RefreshMybatisXml {
 
     private Resource[] mapperLocations;
 
+	private final String MAPPED_STATEMENTS = "mappedStatements";
+    private final String CACHES = "caches";
+    private final String RESULT_MAPS = "resultMaps";
+    private final String PARAMETER_MAPS = "parameterMaps";
+    private final String KEY_GENERATORS = "keyGenerators";
+    private final String SQL_FRAGMENTS = "sqlFragments";
+    private final String LOADED_RESOURCES = "loadedResources";
+	
     /**
      * 扫描路径
      */
@@ -50,17 +57,11 @@ public class RefreshMybatisXml {
                 fileMapping.put(resourceName, Long.valueOf(lastFrame));
             }
         } catch (Exception e) {
+            logger.error("mybatis热部署初始化异常！", e);
             e.printStackTrace();
         }
     }
 
-    private final String MAPPED_STATEMENTS = "mappedStatements";
-    private final String CACHES = "caches";
-    private final String RESULT_MAPS = "resultMaps";
-    private final String PARAMETER_MAPS = "parameterMaps";
-    private final String KEY_GENERATORS = "keyGenerators";
-    private final String SQL_FRAGMENTS = "sqlFragments";
-    private final String LOADED_RESOURCES = "loadedResources";
 
     @RequestMapping(value = "refreshXml", method = RequestMethod.GET)
     public Map<String, Object> refreshMapperXml(){
@@ -79,39 +80,24 @@ public class RefreshMybatisXml {
             }
 
             // step.2 判断是否有文件发生了变化
-            Set<String> changedFiles = new HashSet<>(16);
+            Map<String, Resource> changedFiles = new HashMap<>(16);
             if (this.isChanged(changedFiles)) {
                 XMLMapperBuilder builder;
-                for (Resource configLocation : mapperLocations) {
-                    String keyword = null;
-                    String resource = configLocation.toString();
-                    Iterator<String> iterator = changedFiles.iterator();
-                    while(iterator.hasNext()){
-                        String value = iterator.next();
-                        if (resource.indexOf(value) != -1){
-                            keyword = value;
-                            iterator.remove();
-                            break;
-                        }
-                    }
-                    if (keyword == null){
-                        continue;
-                    }
-
+                for (String key : changedFiles.keySet()) {
+                    Resource resource = changedFiles.get(key);
                     // step.2.1 清理
-                    this.removeConfig(configuration, keyword);
+                    this.removeConfig(configuration, key);
 
                     try{
                         // step.2.2 重新加载
-                        builder = new XMLMapperBuilder(configLocation.getInputStream(), configuration, resource, configuration.getSqlFragments());
+                        builder = new XMLMapperBuilder(resource.getInputStream(), configuration, resource.toString(), configuration.getSqlFragments());
                         builder.parse();
-                        logger.info("mapper文件[{}]缓存加载成功", configLocation.getFilename());
+                        logger.info("mapper文件[{}]缓存加载成功", resource.getFilename());
                     } catch (IOException e){
-                        logger.error("mapper文件[{}]不存在或内容格式不对", configLocation.getFilename());
+                        logger.error("mapper文件[{}]不存在或内容格式不对", resource.getFilename());
                         continue;
                     }
                 }
-                builder = null;
             }
         }
         catch (Exception e){
@@ -126,7 +112,7 @@ public class RefreshMybatisXml {
         return results;
     }
 
-    private boolean isChanged(Set<String> changedFiles) throws IOException{
+    private boolean isChanged(Map<String, Resource> changedFiles) throws IOException{
         boolean flag = false;
         for(Resource resource : mapperLocations){
             String resourceName = resource.getFilename();
@@ -138,7 +124,7 @@ public class RefreshMybatisXml {
                 // 文件内容帧值
                 fileMapping.put(resourceName, Long.valueOf(lastFrame));
                 flag = true;
-                changedFiles.add(resourceName.split("\\.")[0]);
+                changedFiles.put(resourceName.split("\\.")[0], resource);
                 continue;
             } else{
                 // 修改文件:判断文件是否有变化
@@ -147,7 +133,7 @@ public class RefreshMybatisXml {
                 boolean modifyFlag = compareFrame != null && compareFrame.longValue() != lastFrame;
                 if (modifyFlag){
                     fileMapping.put(resourceName, Long.valueOf(lastFrame));
-                    changedFiles.add(resourceName.split("\\.")[0]);
+                    changedFiles.put(resourceName.split("\\.")[0], resource);
                     flag = true;
                 }
             }
