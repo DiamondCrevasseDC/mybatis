@@ -98,8 +98,7 @@ public class RefreshMybatisXml {
                     }
                 }
             }
-        }
-        catch (Exception e){
+        } catch (Exception e){
             logger.error("热部署Mybatis映射文件异常！", e);
             results.put("msg", "热部署Mybatis映射文件异常!");
             return results;
