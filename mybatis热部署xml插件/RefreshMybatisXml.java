@@ -58,7 +58,6 @@ public class RefreshMybatisXml {
             }
         } catch (Exception e) {
             logger.error("mybatis热部署初始化异常！", e);
-            e.printStackTrace();
         }
     }
 
