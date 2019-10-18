@@ -27,18 +27,18 @@ public class RefreshMybatisXml {
 
     private Resource[] mapperLocations;
 
-	private final String MAPPED_STATEMENTS = "mappedStatements";
+    private final String MAPPED_STATEMENTS = "mappedStatements";
     private final String CACHES = "caches";
     private final String RESULT_MAPS = "resultMaps";
     private final String PARAMETER_MAPS = "parameterMaps";
     private final String KEY_GENERATORS = "keyGenerators";
     private final String SQL_FRAGMENTS = "sqlFragments";
     private final String LOADED_RESOURCES = "loadedResources";
-	
+
     /**
      * 扫描路径
      */
-    private static final String scanPath = "classpath*:/mybatis/oracle/**/*.xml";
+    private static final String scanPath = "classpath*:/mybatis/*.xml";
 
     /**
      * 记录文件是否变化
@@ -60,7 +60,6 @@ public class RefreshMybatisXml {
             logger.error("mybatis热部署初始化异常！", e);
         }
     }
-
 
     @RequestMapping(value = "refreshXml", method = RequestMethod.GET)
     public Map<String, Object> refreshMapperXml(){
